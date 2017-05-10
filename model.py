@@ -1,4 +1,4 @@
-from keras.layers.core import (Dense, Flatten, Dropout)
+from keras.layers.core import (Dense, Flatten, Dropout, Lambda)
 from keras.layers.advanced_activations import ELU
 from keras.layers.convolutional import Convolution2D
 from sklearn.model_selection import train_test_split
@@ -6,7 +6,7 @@ from keras.optimizers import Adam
 import json
 from keras.models import Sequential
 from datagenerator import DataGenerator
-import pandas as pd
+import csv
 
 
 class ModelManager:
@@ -16,16 +16,15 @@ class ModelManager:
         self.generator = dg.generator
 
     def defineModel(self, image_shape):
-        ch, row, col = image_shape
+        ch, row, col = 160, 320, 3
         model = Sequential()
         # Preprocess incoming data, centered around zero with small standard
         # deviation
-        # model.add(Lambda(lambda x: x / 127.5 - 1.,
-        #                 input_shape=(ch, row, col),
-        #                 output_shape=(ch, row, col)))
+        model.add(Lambda(lambda x: x / 127.5 - 1.,
+                         input_shape=(ch, row, col),
+                         output_shape=(ch, row, col)))
 
-        model.add(Convolution2D(36, 5, 5, subsample=(2, 2),
-                                input_shape=(66, 200, 3)))
+        model.add(Convolution2D(36, 5, 5, subsample=(2, 2)))
 
         model.add(ELU())
         model.add(Dropout(0.2))
@@ -94,7 +93,12 @@ class ModelManager:
 
 
 if __name__ == "__main__":
+    samples = []
     data_path = "data/driving_log.csv"
-    samples_df = pd.read_csv(data_path)
+    with open(data_path) as csvfile:
+        reader = csv.reader(csvfile)
+        for line in reader:
+            samples.append(line)
+
     mm = ModelManager()
-    tg = mm.trainModel(samples_df)
+    tg = mm.trainModel(samples)

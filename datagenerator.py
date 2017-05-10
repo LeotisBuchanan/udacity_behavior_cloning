@@ -1,36 +1,43 @@
 import pandas as pd
 from sklearn.utils import shuffle
-import numpy as np
 import matplotlib.pyplot as plt
+import csv
+from sklearn.model_selection import train_test_split
 import cv2
-
+import numpy as np
+import sklearn
 from ImageProcessor import ImageProcessor
 
 
 class DataGenerator:
-
     def __init__(self):
+
         image_processor = ImageProcessor()
         self.augment_func = image_processor.process
 
-    def generator(self, samples_df, batch_size=32):
-        num_samples = len(samples_df)
+    def generator(self, samples, batch_size=32):
+
+        num_samples = len(samples)
+
         while 1:  # Loop forever so the generator never terminates
-            X_train = []
-            y_train = []
-            samples_df = samples_df.sample(frac=1).reset_index(drop=True)
+            shuffle(samples)
             for offset in range(0, num_samples, batch_size):
-                batch_samples_df = samples_df[offset:offset + batch_size]
-                augmented_df = batch_samples_df.apply(self.getAugmentedSample,
-                                                      axis=1)
-                # convert df column to array
-                images_df = augmented_df[[0]]
-                angles_df = augmented_df[[1]]
-                X_train = np.vstack(images_df.values)
-                y_train = np.vstack(angles_df.values)
-                # (8036, 66, 200, 3) (8036,)
-                print(X_train.shape, y_train.shape)
-                yield X_train[0], y_train.shape
+                batch_samples = samples[offset:offset + batch_size]
+
+                images = []
+                angles = []
+                for batch_sample in batch_samples:
+                    
+                    name = 'data/IMG/' + batch_sample[0].split('/')[-1]
+                    center_image = cv2.imread(name)
+                    center_angle = float(batch_sample[3])
+                    images.append(center_image)
+                    angles.append(center_angle)
+
+                # trim image to only see section with road
+                X_train = np.array(images)
+                y_train = np.array(angles)
+                yield sklearn.utils.shuffle(X_train, y_train)
 
     def getAugmentedImage(self, camera_name, row,
                           augment_func, steering_correction):
@@ -77,11 +84,21 @@ class DataGenerator:
 if __name__ == "__main__":
     path = "data/driving_log.csv"
     ld = DataGenerator()
-    df = pd.read_csv(path)
-    images, angles = next(ld.generator(df))
-    img = images[0]
+
+    samples = []
+    with open(path) as csvfile:
+        reader = csv.reader(csvfile)
+        for line in reader:
+            samples.append(line)
+
+    train_samples, validation_samples = train_test_split(samples, test_size=0.2)
+    train_gen = ld.generator(train_samples)
+    valid_gen = ld.generator(validation_samples)
+    x_train, y_train = next(train_gen)
+    img = x_train[0]
+    ang  = y_train[0]
     print(img.shape)
-    # plt.imshow(images[0])
-    # plt.show()
-    # print(type(np.array(df["steering"].values)))
-    # g = ld.generator(df)
+    print(ang)
+    plt.imshow(img)
+    plt.show()
+
