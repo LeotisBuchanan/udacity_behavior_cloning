@@ -7,10 +7,23 @@ import cv2
 import numpy as np
 import sklearn
 from ImageProcessor import ImageProcessor
+from enum import Enum
 
+"""
+def my_exit(msg):
+    import sys
+    print(msg)
+    sys.exit(0)
+"""
 
 class DataGenerator:
+
+
     def __init__(self):
+
+        self.LEFT, self.CENTER, self.RIGHT = 0, 1, 2
+        self.SMALL_SCALE = 0.9
+        self.LARGE_SCALE = 1.1
 
         image_processor = ImageProcessor()
         self.augment_func = image_processor.process
@@ -27,12 +40,9 @@ class DataGenerator:
                 images = []
                 angles = []
                 for batch_sample in batch_samples:
-                    
-                    name = 'data/IMG/' + batch_sample[0].split('/')[-1]
-                    center_image = cv2.imread(name)
-                    center_angle = float(batch_sample[3])
-                    images.append(center_image)
-                    angles.append(center_angle)
+                    image, angle = self.getAugmentedSample(batch_sample)
+                    images.append(image)
+                    angles.append(float(angle))
 
                 # trim image to only see section with road
                 X_train = np.array(images)
@@ -41,48 +51,73 @@ class DataGenerator:
 
     def getAugmentedImage(self, camera_name, row,
                           augment_func, steering_correction):
+
         path_prefix = "data/"
-        path = row["left"]
-        steering_angle = row["steering"]
-        path = path_prefix + path.strip()
+        image_path = row[camera_name]
+        image  = None
+        steering_angle = None
+
+
+        STEERING_IDX = 3
+        angle = float(row[STEERING_IDX])
+
+        if angle > 0:  # right turn
+            l_angle = self.LARGE_SCALE * angle
+            r_angle = self.SMALL_SCALE * angle
+        else:  # left turn
+            l_angle = self.SMALL_SCALE * angle
+            r_angle = self.LARGE_SCALE * angle
+
+        path = path_prefix + image_path.strip()
         image = plt.imread(path.strip())
-        new_angle = float(steering_angle) + steering_correction
-        image, steering_angle = self.augment_func(image, new_angle)
+        # new_angle = float(steering_angle) + steering_correction
+
+
+        image, steering_angle = self.augment_func(image, l_angle, self.LEFT)
+        image, steering_angle = self.augment_func(image, r_angle, self.RIGHT)
 
         return image, steering_angle
 
+
+
     def getAugmentedSample(self, row):
 
-        cam_view = np.random.choice(['center', 'left', 'right'])
+        #['IMG/center_2016_12_01_13_36_20_507.jpg', ' IMG/left_2016_12_01_13_36_20_507.jpg',
+        # ' IMG/right_2016_12_01_13_36_20_507.jpg', ' 0.04262284', ' 0.9855326', ' 0', ' 30.18659']
+
+
+        cam_view = np.random.choice([self.LEFT, self.CENTER, self.RIGHT])
+
 
         image = None
         steering_angle = None
-        if cam_view == 'left':
+        if cam_view == self.LEFT:
+
             # left image
-            image, steering_angle = self.getAugmentedImage("left",
+            image, steering_angle = self.getAugmentedImage(self.LEFT,
                                                            row,
                                                            self.augment_func,
                                                            0.25)
 
-        elif cam_view == 'center':
+        elif cam_view == self.CENTER:
             # centre image
-            image, steering_angle = self.getAugmentedImage("center",
+            image, steering_angle = self.getAugmentedImage(self.CENTER,
                                                            row,
                                                            self.augment_func,
                                                            0)
 
-        elif cam_view == 'right':
+        elif cam_view == self.RIGHT:
             # right image
-            image, steering_angle = self.getAugmentedImage("right",
+            image, steering_angle = self.getAugmentedImage(self.RIGHT,
                                                            row,
                                                            self.augment_func,
                                                            -0.25)
 
-        return pd.Series([image, steering_angle])
+        return image, steering_angle
 
 
 if __name__ == "__main__":
-    path = "data/driving_log.csv"
+    path = "combine_data/driving_log_2.csv"
     ld = DataGenerator()
 
     samples = []
@@ -97,8 +132,9 @@ if __name__ == "__main__":
     x_train, y_train = next(train_gen)
     img = x_train[0]
     ang  = y_train[0]
-    print(img.shape)
+
     print(ang)
-    plt.imshow(img)
-    plt.show()
+    print(img)
+
+
 

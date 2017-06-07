@@ -38,43 +38,49 @@ class ImageProcessor:
 
         return image_tr, steering_angle
 
-    def crop_image(self, image, y1, y2, x1, x2):
-        cropped_image = image[y1:y2, x1:x2]
-        return cropped_image
+    def darker_img(self, image):
+        # Convert to YUV
+        img_yuv = cv2.cvtColor(image, cv2.COLOR_BGR2YUV)
+        img_gray = img_yuv[:, :, 0]
 
-    def process(self, image, steering_angle):
+        # Pick the majority pixels of the image
+        idx = (img_gray < 245) & (img_gray > 10)
+
+        # Make the image darker
+        img_gray_scale = img_gray[idx] * np.random.uniform(0.1, 0.6)
+        img_gray[idx] = img_gray_scale
+
+        # Convert back to BGR
+        img_yuv[:, :, 0] = img_gray
+        img = cv2.cvtColor(img_yuv, cv2.COLOR_YUV2BGR)
+        return img
+
+    def process(self, image, steering_angle,CAMERA):
+
         """
          Apply processing to image
         """
         # image size
         im_x = image.shape[1]
 
-        # translate image and compensate for steering angle
-        trans_range = 50
-        image, steering_angle = self.random_translate(image,
-                                                      steering_angle,
-                                                      trans_range)
-
-        # crop unwanted parts of image
-        image = self.crop_image(image, 20, 140,
-                                trans_range, im_x - trans_range)
-
-        # resize the image after cropping
-        image = cv2.resize(image, (200, 66))
-
         # flip image (randomly)
         if np.random.uniform() >= 0.5:
             image = cv2.flip(image, 1)
             steering_angle = -steering_angle
 
+        # randomly darken the image
+        if np.random.uniform() >= 0.5:
+            image = self.darker_img(image)
+
         # augment brightness
-        image = self.augment_brightness(image)
+        #image = self.augment_brightness(image)
 
         return image, steering_angle
 
 
 if __name__ == "__main__":
     image = mpimg.imread("data/IMG/left_2016_12_01_13_39_24_588.jpg")
+    image = cv2.imread("data/IMG/left_2016_12_01_13_39_24_588.jpg")
     steering_angle = 0
     ip = ImageProcessor()
     image, sa = ip.process(image, steering_angle)
