@@ -1,117 +1,69 @@
-from keras.layers.core import (Dense, Flatten, Dropout, Lambda)
-from keras.layers.advanced_activations import ELU
-from keras.layers.convolutional import Convolution2D
-from keras.layers import Lambda, Conv2D, MaxPooling2D, Dropout, Dense, Flatten
-from keras.layers import Cropping2D
-from keras.callbacks import ModelCheckpoint, Callback
-from sklearn.model_selection import train_test_split
-from keras.optimizers import Adam
-import json
-from keras.models import Sequential
-from datagenerator import DataGenerator
-from keras import layers
-from keras import models
 import csv
+import cv2
+import numpy as np
+import matplotlib.image as mpimg
+from keras.layers import Lambda, Conv2D, MaxPooling2D, Dropout, Dense, Flatten
+# get metadata  of the images
+print("started")
+lines =[]
+with open("data/driving_log.csv") as csvfile:
+    reader = csv.reader(csvfile)
+    header = next(reader) #['center', 'left', 'right', 'steering', 'throttle', 'brake', 'speed']
+    for line in reader:
+        lines.append(line)
+# read images into numpy arrays and correct color format
+print("images read")
+images = []
+measurements = []
+for line in lines:
+    source_path = line[0]
+    filename = source_path.split("/")[-1]
+    current_path = "data_track_2/IMG/" + filename
+    rgb = mpimg. imread(current_path)
+    #imgBGR = cv2.imread(current_path) # shape (160,320,3)
+    #imgRGB = cv2.cvtColor(imgBGR, cv2.COLOR_BGR2RGB)
+    images.append(rgb)
+    measurement = float(line[3])  # steer
+    measurements.append(measurement)
+    #images.append(np.fliplr(imgRGB)) # flip images
+    #measurements.append(-measurement)
+# format data into numpy array and delete old variables
+X_train = np.array(images)  #(8036, 160, 320, 3)
+y_train = np.array(measurements) #(8036,)
+del images, measurements  # save memory
+print("pickling files")
+# store variables to local and check the memory burden,
+#  8036*160*320*3/1e9=1.23 G
 
+import pickle
+with open('data_track2.pickle','wb') as f:
+    pickle.dump((X_train,y_train), f, pickle.HIGHEST_PROTOCOL)
+# recover variables
+with open('data_track2.pickle', 'rb') as f:
+    metadata = pickle.load(f)
 
-class ModelManager:
-
-    def __init__(self):
-        dg = DataGenerator()
-        self.generator = dg.generator
-
-    def defineModel2(self, INPUT_SHAPE):
-        model = Sequential()
-        model.add(Lambda(lambda x: x/127.5-1.0, input_shape=INPUT_SHAPE))
-        model.add(layers.Conv2D(32, (3, 3), activation='relu', input_shape=INPUT_SHAPE))
-        model.add(layers.MaxPooling2D((2, 2)))
-        model.add(layers.Conv2D(64, (3, 3), activation='relu'))
-        model.add(layers.MaxPooling2D((2, 2)))
-        model.add(layers.Conv2D(64, (3, 3), activation='relu'))
-        model.add(Dropout(0.1))
-        model.add(Flatten())
-        model.add(Dense(100, activation='relu'))
-        model.add(Dense(50, activation='relu'))
-        model.add(Dense(10, activation='relu'))
-        model.add(Dense(1,activation='relu'))
-        model.summary()
-        model.compile(loss='mean_squared_error', optimizer=Adam(),metrics=['accuracy'])
-        return model
-
-
-        
-    def defineModel(self, INPUT_SHAPE):
-         model = Sequential()
-         model.add(Lambda(lambda x: x/127.5-1.0, input_shape=INPUT_SHAPE))
-         model.add(Conv2D(24, 5, 5, activation='elu', subsample=(2, 2)))
-         model.add(Conv2D(36, 5, 5, activation='elu', subsample=(2, 2)))
-         model.add(Conv2D(48, 5, 5, activation='elu', subsample=(2, 2)))
-         model.add(Conv2D(64, 3, 3, activation='elu'))
-         model.add(Conv2D(64, 3, 3, activation='elu'))
-         model.add(Conv2D(64, 3, 3, activation='elu'))
-         model.add(Conv2D(128, 3, 3, activation='elu'))
-         model.add(Dropout(0.1))
-         model.add(Flatten())
-         model.add(Dense(100, activation='elu'))
-         model.add(Dense(50, activation='elu'))
-         model.add(Dense(10, activation='elu'))
-         model.add(Dense(1))
-         model.summary()
-         model.compile(loss='mean_squared_error', optimizer=Adam(),metrics=['accuracy'])
-         return model
-
-
-    def trainModel(self, samples_df, model_path="model"):
-        # compile and train the model using the generator function
-
-        print("training model")
-        (train_samples_df,
-         validation_samples_df) = train_test_split(samples_df,
-                                                   test_size=0.2)
-
-        train_generator = self.generator(train_samples_df)
-        validation_generator = self.generator(validation_samples_df)
-
-        image_input_shape = (160, 320, 3)
-        # image_input_shape = 66, 200, 3
-        model = self.defineModel2(image_input_shape)
-        # train model
-        checkpoint = ModelCheckpoint('model{epoch:02d}.h5')
-        """
-        model.fit_generator(train_generator,
-                            callbacks=[checkpoint],
-                            samples_per_epoch=len(train_samples_df),
-                            validation_data=validation_generator,
-                            nb_val_samples=len(validation_samples_df),
-                            nb_epoch=3)
-        """
-        model.fit_generator(train_generator,
-                            callbacks=[checkpoint],
-                            samples_per_epoch=20000,
-                            validation_data=validation_generator,
-                            nb_val_samples=2000,
-                            nb_epoch=10)
-
-
-
-        # save the model
-        model.save_weights(model_path + '_weights.h5', True)
-        model.save(model_path + '.h5')
-        with open(model_path + '.json', 'w') as outfile:
-            json.dump(model.to_json(), outfile)
-
-
-    
-if __name__ == "__main__":
-    import sys
-    samples = []
-    data_path = "data/driving_log_100.csv"
-    data_path = "data/driving_log_path_fixed.csv"
-    #data_path = "data/driving_log.csv"
-    with open(data_path) as csvfile:
-        reader = csv.reader(csvfile)
-        next(reader)
-        for line in reader:
-            samples.append(line)
-    mm = ModelManager()
-    tg = mm.trainModel(samples)
+# use keras to implement NVIDIA architecture,  5 CNN layers, dropout and 4 dense layer
+from keras.models import Sequential
+from keras.layers import Cropping2D, Dense, Activation, Flatten, Dropout
+from keras.layers.convolutional import Convolution2D as Conv2D
+from keras.layers.pooling import MaxPooling2D
+from keras.layers import Lambda, Conv2D, MaxPooling2D, Dropout, Dense, Flatten
+print("building models")
+model = Sequential()
+model.add(Lambda(lambda x: x/255.0-0.5, input_shape=(160,320,3)))
+model.add(Cropping2D(cropping=((50,20),(0,0)))) # (top,bottom),(left,right)
+model.add(Conv2D(24,(5,5),strides = (2,2), activation = "relu"))
+model.add(Conv2D(36,(5,5),strides = (2,2), activation = "relu"))
+model.add(Conv2D(48,(5,5),activation = "relu"))
+model.add(Conv2D(64,(3,3),activation = "relu"))
+model.add(Conv2D(64,(3,3),activation = "relu"))
+model.add(Dropout(0.5))
+model.add(Flatten())
+model.add(Dense(100))
+model.add(Dense(50))
+model.add(Dense(10))
+model.add(Dense(1))
+model.summary()
+model.compile(loss="mse", optimizer = "adam", metrics=["accuracy"])
+model.fit(X_train, y_train, validation_split=0.2,shuffle = True, epochs=10)
+model.save('model.h5')  # save model to .h5 file, including architechture, weights, loss, optimizer
