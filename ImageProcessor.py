@@ -8,7 +8,19 @@ class ImageProcessor:
 
     def __init__(self):
         pass
+        
 
+    def random_brightness(self,image):
+        """
+        Randomly adjust brightness of the image.
+        """
+        # HSV (Hue, Saturation, Value) is also called HSB ('B' for Brightness).
+        hsv = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
+        ratio = 1.0 + 0.4 * (np.random.rand() - 0.5)
+        hsv[:,:,2] =  hsv[:,:,2] * ratio
+        return cv2.cvtColor(hsv, cv2.COLOR_HSV2RGB)
+
+    
     def augment_brightness(self, image):
         """
          apply random brightness on the image
@@ -19,6 +31,20 @@ class ImageProcessor:
         # scaling up or down the V channel of HSV
         image[:, :, 2] = image[:, :, 2] * random_bright
         return image
+
+
+    def crop(self,image):
+        """
+        Crop the image (removing the sky at the top and the car front at the bottom)
+        """
+        return image[60:-25, :, :] # remove the sky and the car front
+
+
+    def resize(self,image,w,h):
+        """
+        Resize the image to the input shape used by the network model
+        """
+        return cv2.resize(image, (w, h), cv2.INTER_AREA)
 
     def random_translate(self, image, steer, trans_range):
         """
@@ -55,7 +81,7 @@ class ImageProcessor:
         img = cv2.cvtColor(img_yuv, cv2.COLOR_YUV2BGR)
         return img
 
-    def process(self, image, steering_angle,CAMERA):
+    def process(self, image, steering_angle, camera):
 
         """
          Apply processing to image
@@ -73,17 +99,20 @@ class ImageProcessor:
             image = self.darker_img(image)
 
         # augment brightness
-        #image = self.augment_brightness(image)
-
+        w, h = image.shape[1], image.shape[0]
+        image = self.augment_brightness(image)
+        image = self.crop(image)
+        image =  self.resize(image,w,h)
         return image, steering_angle
 
 
 if __name__ == "__main__":
-    image = mpimg.imread("data/IMG/left_2016_12_01_13_39_24_588.jpg")
-    image = cv2.imread("data/IMG/left_2016_12_01_13_39_24_588.jpg")
+    #image = mpimg.imread("data/IMG/center_2017_05_24_18_14_12_653.jpg")
+    image = cv2.imread("data/IMG/center_2017_05_24_18_14_12_653.jpg")
+    print(image.shape)
     steering_angle = 0
     ip = ImageProcessor()
-    image, sa = ip.process(image, steering_angle)
+    image, sa = ip.process(image, steering_angle,1)
     print(image.shape)
     plt.imshow(image)
     plt.show()

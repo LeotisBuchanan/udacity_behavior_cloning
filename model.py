@@ -1,12 +1,16 @@
 from keras.layers.core import (Dense, Flatten, Dropout, Lambda)
 from keras.layers.advanced_activations import ELU
 from keras.layers.convolutional import Convolution2D
+from keras.layers import Lambda, Conv2D, MaxPooling2D, Dropout, Dense, Flatten
 from keras.layers import Cropping2D
+from keras.callbacks import ModelCheckpoint, Callback
 from sklearn.model_selection import train_test_split
 from keras.optimizers import Adam
 import json
 from keras.models import Sequential
 from datagenerator import DataGenerator
+from keras import layers
+from keras import models
 import csv
 
 
@@ -16,53 +20,46 @@ class ModelManager:
         dg = DataGenerator()
         self.generator = dg.generator
 
-
-    def defineModel(self, image_shape):
-        # i think the problem is with this image size
-        ch, row, col = 160, 320, 3
+    def defineModel2(self, INPUT_SHAPE):
         model = Sequential()
-        # Preprocess incoming data, centered around zero with small standard
-        # deviation
-        model.add(Lambda(lambda x: x / 127.5 - 1.,
-                         input_shape=(ch, row, col),
-                         output_shape=(ch, row, col)))
-
-        model.add(Cropping2D(cropping=((50, 20), (0, 0)), input_shape=(160, 320, 3)))
-
-        model.add(Convolution2D(36, 5, 5, subsample=(2, 2)))
-        model.add(ELU())
-
-
-        model.add(Convolution2D(48, 3, 3, subsample=(2, 2)))
-        model.add(ELU())
-
-
-        model.add(Convolution2D(64, 3, 3, subsample=(1, 1)))
-        model.add(ELU())
-        model.add(Dropout(0.2))
-
-        model.add(Convolution2D(128, 3, 3, subsample=(1, 1)))
-        model.add(ELU())
-        
+        model.add(Lambda(lambda x: x/127.5-1.0, input_shape=INPUT_SHAPE))
+        model.add(layers.Conv2D(32, (3, 3), activation='relu', input_shape=INPUT_SHAPE))
+        model.add(layers.MaxPooling2D((2, 2)))
+        model.add(layers.Conv2D(64, (3, 3), activation='relu'))
+        model.add(layers.MaxPooling2D((2, 2)))
+        model.add(layers.Conv2D(64, (3, 3), activation='relu'))
+        model.add(Dropout(0.1))
         model.add(Flatten())
-
-        model.add(Dense(100))
-        model.add(ELU())
-                
-        model.add(Dense(50))
-        model.add(ELU())
-        
-
-        model.add(Dense(10))
-        model.add(ELU())
-
-        model.add(Dense(1))
-
-        opt = Adam(lr=0.00007)
-        model.compile(optimizer=opt, loss='mse', metrics=['accuracy'])
+        model.add(Dense(100, activation='relu'))
+        model.add(Dense(50, activation='relu'))
+        model.add(Dense(10, activation='relu'))
+        model.add(Dense(1,activation='relu'))
         model.summary()
-
+        model.compile(loss='mean_squared_error', optimizer=Adam(),metrics=['accuracy'])
         return model
+
+
+        
+    def defineModel(self, INPUT_SHAPE):
+         model = Sequential()
+         model.add(Lambda(lambda x: x/127.5-1.0, input_shape=INPUT_SHAPE))
+         model.add(Conv2D(24, 5, 5, activation='elu', subsample=(2, 2)))
+         model.add(Conv2D(36, 5, 5, activation='elu', subsample=(2, 2)))
+         model.add(Conv2D(48, 5, 5, activation='elu', subsample=(2, 2)))
+         model.add(Conv2D(64, 3, 3, activation='elu'))
+         model.add(Conv2D(64, 3, 3, activation='elu'))
+         model.add(Conv2D(64, 3, 3, activation='elu'))
+         model.add(Conv2D(128, 3, 3, activation='elu'))
+         model.add(Dropout(0.1))
+         model.add(Flatten())
+         model.add(Dense(100, activation='elu'))
+         model.add(Dense(50, activation='elu'))
+         model.add(Dense(10, activation='elu'))
+         model.add(Dense(1))
+         model.summary()
+         model.compile(loss='mean_squared_error', optimizer=Adam(),metrics=['accuracy'])
+         return model
+
 
     def trainModel(self, samples_df, model_path="model"):
         # compile and train the model using the generator function
@@ -75,15 +72,27 @@ class ModelManager:
         train_generator = self.generator(train_samples_df)
         validation_generator = self.generator(validation_samples_df)
 
-
-        image_input_shape = 66, 200, 3
-        model = self.defineModel(image_input_shape)
+        image_input_shape = (160, 320, 3)
+        # image_input_shape = 66, 200, 3
+        model = self.defineModel2(image_input_shape)
         # train model
+        checkpoint = ModelCheckpoint('model{epoch:02d}.h5')
+        """
         model.fit_generator(train_generator,
+                            callbacks=[checkpoint],
                             samples_per_epoch=len(train_samples_df),
                             validation_data=validation_generator,
                             nb_val_samples=len(validation_samples_df),
-                            nb_epoch=100)
+                            nb_epoch=3)
+        """
+        model.fit_generator(train_generator,
+                            callbacks=[checkpoint],
+                            samples_per_epoch=20000,
+                            validation_data=validation_generator,
+                            nb_val_samples=2000,
+                            nb_epoch=10)
+
+
 
         # save the model
         model.save_weights(model_path + '_weights.h5', True)
