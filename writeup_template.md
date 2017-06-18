@@ -1,9 +1,5 @@
 #**Behavioral Cloning**
 
-##Writeup Template
-
-###You can use this file as a template for your writeup if you want to submit it as a markdown file, but feel free to use some other method and submit a pdf if you prefer.
-
 ---
 
 **Behavioral Cloning Project**
@@ -43,7 +39,7 @@ My project includes the following files:
 ####2. Submission includes functional code
 Using the Udacity provided simulator and my drive.py file, the car can be driven autonomously around the track by executing
 ```sh
-python drive.py model.h5
+python drive.py models/track1/model.h5
 ```
 
 ####3. Submission code is usable and readable
@@ -54,18 +50,36 @@ The model.py file contains the code for training and saving the convolution neur
 
 ####1. An appropriate model architecture has been employed
 
-My model consists of a convolution neural network with 3x3 filter sizes and depths between 32 and 64 (model.py lines 27-44)
+I used the following model architecture: 
 
-The model includes ELU layers to introduce nonlinearity after all convolutional layer.
-The data is normalized in the model using a Keras lambda layer as the first layer in the
-model( see line 23 in model.py)
+
+conv2d_2 (Conv2D)            (None, 20, 77, 36)        21636
+conv2d_3 (Conv2D)            (None, 16, 73, 48)        43248
+conv2d_4 (Conv2D)            (None, 14, 71, 64)        27712
+conv2d_5 (Conv2D)            (None, 12, 69, 64)        36928
+dropout_1 (Dropout)          (None, 12, 69, 64)        0
+flatten_1 (Flatten)          (None, 52992)             0
+dense_1 (Dense)              (None, 100)               5299300
+dense_2 (Dense)              (None, 50)                5050
+dense_3 (Dense)              (None, 10)                510
+dense_4 (Dense)              (None, 1)                 11
+
+The model is implemented in model.py file in the buildModel method. 
+As seen in the implementation relu layers to introduce nonlinearity after all convolutional layers. 
+
+
 
 ####2. Attempts to reduce overfitting in the model
 
-The model contains dropout layers after each ELU activation layer, the aim of these
-dropout layers was to reduce overfitting.
+My model contains a single dropout layer, having a value of 0.5. This layer was introduced when I noticed that the train model was performing better on the training data than on the validation data. This is often an indication that the model is overfitting. Thus I added a dropout layer to reduce this overfitting.
 
-The model was trained and validated on randomly augmented udacity data set. The transformations are implemented in the ImageProcessor class, which can be found in the ImageProcessor.py file.
+
+#### Augmenting the data: 
+I did not used the provided udacity data set. Instead I used the simulator to collect my data. My approach to collecting this data was perform alot of sharp left and right turns. I believe doing emphasized the importance of not running off the road. 
+
+I first tried to train the model with a lot of augmented data. All of these attempts were unsuccessfull. Eventually in dispair I tried the training the model with small amount of data, collected as described above. I also only use the center image(because who really drives with 3 cameras). 
+
+It worked. You can see the video of the result here : <insert video>
 
 ####3. Model parameter tuning
 
@@ -78,9 +92,8 @@ The model used an adam optimizer, so the learning rate was not tuned manually (m
 
 ####4. Appropriate training data
 
-Training data was chosen to keep the vehicle driving on the road. I used a combination of center lane driving, recovering from the left and right sides of the road ...
+I spent hours gathering trainig data, recovering from left, recovering from right etc. Augmenting the data etc. Then I decided to just try using only the center camera. I also decided to drive in such away that my training data contain a lot of recovering from left and right.
 
-For details about how I created the training data, see the next section.
 
 ### Model Architecture and Training Strategy
 
@@ -104,9 +117,7 @@ At the end of the process, the vehicle is able to drive autonomously around the 
 
 The final model architecture (model.py lines 18-24) consisted of a convolution neural network with the following layers and layer sizes ...
 
-Here is a visualization of the architecture (note: visualizing the architecture is optional according to the project rubric)
 
-![alt text][image1]
 
 ####3. Creation of the Training Set & Training Process
 
