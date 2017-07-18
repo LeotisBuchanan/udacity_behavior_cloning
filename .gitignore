@@ -1,6 +1,7 @@
+IMG
 *.csv
-*.jpg
 *.pyc
 *~
 *pickle
 *.h5
+run1
