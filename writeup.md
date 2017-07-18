@@ -79,13 +79,13 @@ I used the standard adam optimiser with mse for loss metrics. As a result I did 
 I spent hours gathering training data, recovering from left, recovering from right etc. Augmenting the data etc. Then I decided to just try using only the center camera. I also decided to drive in such away that my training data contain a lot of recovering from left and right.
 
 
-###### examples of images that my model was trained on:
+#### examples of images that my model was trained on:
 
-![alt text](examples/left_2017_06_16_07_32_23_423.jpg "Logo Title Text 1")
-![alt text](examples/right_2017_06_16_07_32_23_423.jpg "Logo Title Text 1")
-![alt text](examples/center_2017_06_16_07_32_24_006.jpg "Logo Title Text 1")
-![alt text](examples/left_2017_06_16_07_32_24_006.jpg "Logo Title Text 1")
-![alt text](examples/right_2017_06_16_07_32_24_006.jpg "Logo Title Text 1")
+![alt text](examples/left_2017_06_16_07_32_23_423.jpg "1")
+![alt text](examples/right_2017_06_16_07_32_23_423.jpg "2")
+![alt text](examples/center_2017_06_16_07_32_24_006.jpg "3")
+![alt text](examples/left_2017_06_16_07_32_24_006.jpg "4")
+![alt text](examples/right_2017_06_16_07_32_24_006.jpg "5")
 
 
 
