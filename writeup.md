@@ -83,7 +83,6 @@ I spent hours gathering training data, recovering from left, recovering from rig
 
 ![alt text](examples/left_2017_06_16_07_32_23_423.jpg "1")
 ![alt text](examples/right_2017_06_16_07_32_23_423.jpg "2")
-![alt text](examples/center_2017_06_16_07_32_24_006.jpg "3")
 ![alt text](examples/left_2017_06_16_07_32_24_006.jpg "4")
 ![alt text](examples/right_2017_06_16_07_32_24_006.jpg "5")
 
